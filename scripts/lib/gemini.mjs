@@ -59,7 +59,7 @@ export async function getGeminiAvailability() {
  * @returns {Promise<{text: string, model: string|null}>}
  */
 export async function runGeminiPrompt(prompt, options = {}) {
-  const { model, stdin, timeout = DEFAULT_TIMEOUT_MS, yolo = false, resume } = options;
+  const { model, stdin, timeout = DEFAULT_TIMEOUT_MS, yolo = false, resume, mediaFiles } = options;
 
   const resolvedModel = normalizeRequestedModel(model);
   const args = [];
@@ -67,7 +67,16 @@ export async function runGeminiPrompt(prompt, options = {}) {
   if (yolo) args.push("-y");
   if (resume) args.push("--resume", resume);
   args.push("-o", "text");
-  args.push(prompt);
+  if (mediaFiles?.length) {
+    // Media files: gemini -p "prompt" image.png (non-interactive with media)
+    args.push("-p", prompt);
+    args.push(...mediaFiles);
+  } else if (stdin) {
+    // When piping stdin, use -p so Gemini reads stdin as context
+    args.push("-p", prompt);
+  } else {
+    args.push(prompt);
+  }
 
   const result = await runGeminiRaw(args, { stdin, timeout });
 

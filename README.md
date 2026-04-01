@@ -9,7 +9,7 @@ A Claude Code plugin that wraps Google's [Gemini CLI](https://github.com/google-
 - Node.js 18+
 
 ```bash
-npm install -g @anthropic-ai/gemini-cli
+npm install -g @google/gemini-cli
 gemini  # triggers browser OAuth on first run
 ```
 

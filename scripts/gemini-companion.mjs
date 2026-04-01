@@ -234,14 +234,28 @@ async function buildAdversarialReviewPrompt(flags, positional) {
   return { prompt, title: `adversarial-review: ${focus}` };
 }
 
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"]);
+
+function isImageFile(filePath) {
+  if (!filePath) return false;
+  const ext = filePath.toLowerCase().slice(filePath.lastIndexOf("."));
+  return IMAGE_EXTENSIONS.has(ext);
+}
+
 async function buildUiReviewPrompt(flags, positional) {
   const focus = positional.join(" ") || "general UI/UX review";
   let context = "";
+  const mediaFiles = [];
 
   if (flags.file) {
-    const content = await readFileContext(flags.file);
-    if (content) {
-      context = `\nFile: ${flags.file}\n\`\`\`\n${content}\n\`\`\`\n`;
+    if (isImageFile(flags.file)) {
+      // Pass image directly to Gemini CLI as a media file (vision)
+      mediaFiles.push(flags.file);
+    } else {
+      const content = await readFileContext(flags.file);
+      if (content) {
+        context = `\nFile: ${flags.file}\n\`\`\`\n${content}\n\`\`\`\n`;
+      }
     }
   }
 
@@ -250,7 +264,7 @@ async function buildUiReviewPrompt(flags, positional) {
     context += `\nProvided content:\n\`\`\`\n${stdinContent}\n\`\`\`\n`;
   }
 
-  if (!context) {
+  if (!context && !mediaFiles.length) {
     const diff = await getGitDiff();
     if (diff) context = `\nGit diff:\n\`\`\`diff\n${diff}\n\`\`\`\n`;
   }
@@ -262,7 +276,7 @@ async function buildUiReviewPrompt(flags, positional) {
   } catch {
     prompt = `You are an expert UI/UX reviewer. Review the following for usability, accessibility, clarity, and user experience.\n\nFocus: ${focus}\n${context}\n\nProvide feedback on:\n1. **UX flow** — Is the user journey clear and intuitive?\n2. **Accessibility** — WCAG compliance, screen readers, keyboard nav\n3. **Copy & messaging** — Error messages, labels, help text clarity\n4. **Visual hierarchy** — Layout, spacing, affordances\n5. **Edge cases** — Empty states, loading states, error states\n\nBe specific and actionable.`;
   }
-  return { prompt, title: `ui-review: ${focus}` };
+  return { prompt, title: `ui-review: ${focus}`, mediaFiles: mediaFiles.length ? mediaFiles : undefined };
 }
 
 async function buildTaskPrompt(flags, positional) {
@@ -280,7 +294,7 @@ async function buildTaskPrompt(flags, positional) {
 // ─── Generic run-or-background handler ──────────────────────────────
 
 async function runCommand(kind, flags, positional, promptBuilder) {
-  const { prompt, title, empty } = await promptBuilder(flags, positional);
+  const { prompt, title, empty, mediaFiles } = await promptBuilder(flags, positional);
 
   if (empty) {
     console.log("No changes found to review.");
@@ -317,6 +331,7 @@ async function runCommand(kind, flags, positional, promptBuilder) {
     model: flags.model,
     yolo: flags.yolo || false,
     resume: flags.resume || undefined,
+    mediaFiles,
   });
 
   if (result.exitCode !== 0) {
