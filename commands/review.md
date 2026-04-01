@@ -1,6 +1,6 @@
 ---
 description: Run a code review via Gemini using git diff
-argument-hint: '[--base <ref>] [--scope auto|working-tree|branch] [focus area]'
+argument-hint: '[--background|--wait] [--base <ref>] [--scope auto|working-tree|branch] [focus area]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*)
 ---

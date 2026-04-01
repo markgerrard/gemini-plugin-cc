@@ -1,6 +1,6 @@
 ---
 description: Ask Gemini a question or get a second opinion
-argument-hint: '[--model <model>] <question>'
+argument-hint: '[--background|--wait] [--model <model>] <question>'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), Bash(cat:*)
 ---

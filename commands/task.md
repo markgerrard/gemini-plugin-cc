@@ -1,6 +1,6 @@
 ---
 description: Delegate a general task to Gemini
-argument-hint: '[--model <model>] [--yolo] <prompt>'
+argument-hint: '[--background|--wait] [--model <model>] [--yolo] <prompt>'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), Bash(cat:*)
 ---

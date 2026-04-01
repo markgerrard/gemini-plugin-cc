@@ -55,13 +55,13 @@ export function parseArgs(argv) {
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
       // Boolean flags
-      if (["wait", "background", "json", "yolo"].includes(key)) {
+      if (["wait", "background", "json", "yolo", "all"].includes(key)) {
         flags[key] = true;
         i++;
         continue;
       }
       // Value flags
-      if (["model", "scope", "file", "base"].includes(key) && i + 1 < argv.length) {
+      if (["model", "scope", "file", "base", "kind"].includes(key) && i + 1 < argv.length) {
         flags[key] = argv[++i];
         i++;
         continue;

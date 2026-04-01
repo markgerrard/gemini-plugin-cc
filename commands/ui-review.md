@@ -1,6 +1,6 @@
 ---
 description: Run a UI/UX review via Gemini
-argument-hint: '[--file <path>] [focus area]'
+argument-hint: '[--background|--wait] [--file <path>] [focus area]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), Bash(cat:*)
 ---
