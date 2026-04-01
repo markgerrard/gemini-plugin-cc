@@ -76,6 +76,7 @@ function printUsage() {
       "  node scripts/gemini-companion.mjs review [--background|--wait] [--base <ref>] [--scope <auto|working-tree|branch>] [focus]",
       "  node scripts/gemini-companion.mjs ui-review [--background|--wait] [--file <path>] [focus]",
       "  node scripts/gemini-companion.mjs task [--background|--wait] [--model <model>] [--yolo] <prompt>",
+      "  node scripts/gemini-companion.mjs adversarial-review [--background|--wait] [--base <ref>] [--scope <auto|working-tree|branch>] [focus]",
       "  node scripts/gemini-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/gemini-companion.mjs result [job-id] [--json]",
       "  node scripts/gemini-companion.mjs cancel [job-id] [--json]",
@@ -166,6 +167,7 @@ async function cmdSetup(flags) {
       lines.push("  /gemini:review [focus]               — Code review (uses git diff)");
       lines.push("  /gemini:ui-review [focus]            — UI/UX review");
       lines.push("  /gemini:task <prompt>                — Delegate a task to Gemini");
+      lines.push("  /gemini:adversarial-review [focus]    — Hostile code review");
       lines.push("  /gemini:status [job-id]              — Show job status");
       lines.push("  /gemini:result [job-id]              — Show finished job result");
       lines.push("  /gemini:cancel [job-id]              — Cancel an active job");
@@ -212,6 +214,24 @@ async function buildReviewPrompt(flags, positional) {
     prompt = `You are an expert code reviewer. Review the following git diff.\n\nFocus: ${focus}\n\nProvide:\n1. **Critical issues** — bugs, security problems, data loss risks\n2. **Important suggestions** — performance, maintainability, best practices\n3. **Minor notes** — style, naming, documentation\n\nBe specific: reference file names and line numbers from the diff.\n\n\`\`\`diff\n${diff}\n\`\`\``;
   }
   return { prompt, title: `review: ${focus}` };
+}
+
+async function buildAdversarialReviewPrompt(flags, positional) {
+  const focus = positional.join(" ") || "find all bugs and security issues";
+  const base = flags.base || "HEAD";
+  const scope = flags.scope || "auto";
+
+  const diff = await getGitDiff(base, scope);
+  if (!diff) return { prompt: null, title: focus, empty: true };
+
+  let prompt;
+  try {
+    const template = await loadPromptTemplate("adversarial-review");
+    prompt = interpolateTemplate(template, { diff, focus });
+  } catch {
+    prompt = `You are a hostile, adversarial code reviewer. Assume bugs exist. Review this diff for security holes, race conditions, edge cases, data integrity issues, and failure modes. Be specific — file:line references, exploit scenarios, concrete fixes. Do NOT pad with praise.\n\nFocus: ${focus}\n\n\`\`\`diff\n${diff}\n\`\`\``;
+  }
+  return { prompt, title: `adversarial-review: ${focus}` };
 }
 
 async function buildUiReviewPrompt(flags, positional) {
@@ -296,6 +316,7 @@ async function runCommand(kind, flags, positional, promptBuilder) {
   const result = await runGeminiPrompt(prompt, {
     model: flags.model,
     yolo: flags.yolo || false,
+    resume: flags.resume || undefined,
   });
 
   if (result.exitCode !== 0) {
@@ -504,6 +525,9 @@ async function main() {
       break;
     case "task":
       await runCommand("task", flags, positional, buildTaskPrompt);
+      break;
+    case "adversarial-review":
+      await runCommand("adversarial-review", flags, positional, buildAdversarialReviewPrompt);
       break;
     case "status":
       await cmdStatus(flags, positional);

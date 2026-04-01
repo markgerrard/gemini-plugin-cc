@@ -9,6 +9,25 @@ import path from "node:path";
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
 
 /**
+ * Model aliases — short names for common Gemini models.
+ */
+const MODEL_ALIASES = new Map([
+  ["pro", "gemini-3.1-pro-preview"],
+  ["flash", "gemini-3-flash-preview"],
+  ["25pro", "gemini-2.5-pro"],
+  ["25flash", "gemini-2.5-flash"],
+  ["lite", "gemini-2.5-flash-lite"],
+]);
+
+/**
+ * Resolve model aliases to full model names.
+ */
+export function normalizeRequestedModel(model) {
+  if (!model) return model;
+  return MODEL_ALIASES.get(model.toLowerCase()) ?? model;
+}
+
+/**
  * Check if the `gemini` CLI is available and logged in.
  */
 export async function getGeminiAvailability() {
@@ -40,11 +59,13 @@ export async function getGeminiAvailability() {
  * @returns {Promise<{text: string, model: string|null}>}
  */
 export async function runGeminiPrompt(prompt, options = {}) {
-  const { model, stdin, timeout = DEFAULT_TIMEOUT_MS, yolo = false } = options;
+  const { model, stdin, timeout = DEFAULT_TIMEOUT_MS, yolo = false, resume } = options;
 
+  const resolvedModel = normalizeRequestedModel(model);
   const args = [];
-  if (model) args.push("-m", model);
+  if (resolvedModel) args.push("-m", resolvedModel);
   if (yolo) args.push("-y");
+  if (resume) args.push("--resume", resume);
   args.push("-o", "text");
   args.push(prompt);
 
@@ -60,11 +81,13 @@ export async function runGeminiPrompt(prompt, options = {}) {
  * Run a prompt and get JSON output from Gemini CLI.
  */
 export async function runGeminiJSON(prompt, options = {}) {
-  const { model, stdin, timeout = DEFAULT_TIMEOUT_MS, yolo = false } = options;
+  const { model, stdin, timeout = DEFAULT_TIMEOUT_MS, yolo = false, resume } = options;
 
+  const resolvedModel = normalizeRequestedModel(model);
   const args = [];
-  if (model) args.push("-m", model);
+  if (resolvedModel) args.push("-m", resolvedModel);
   if (yolo) args.push("-y");
+  if (resume) args.push("--resume", resume);
   args.push("-o", "json");
   args.push(prompt);
 

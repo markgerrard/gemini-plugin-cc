@@ -61,7 +61,7 @@ export function parseArgs(argv) {
         continue;
       }
       // Value flags
-      if (["model", "scope", "file", "base", "kind"].includes(key) && i + 1 < argv.length) {
+      if (["model", "scope", "file", "base", "kind", "resume"].includes(key) && i + 1 < argv.length) {
         flags[key] = argv[++i];
         i++;
         continue;
