@@ -5,6 +5,7 @@
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
 
@@ -127,7 +128,7 @@ function runGeminiRaw(args, options = {}) {
     const proc = spawn("gemini", args, {
       stdio: [stdin ? "pipe" : "ignore", "pipe", "pipe"],
       env: { ...process.env },
-      timeout,
+      timeout, // Node's native spawn timeout sends SIGTERM automatically
     });
 
     let stdout = "";
@@ -137,22 +138,19 @@ function runGeminiRaw(args, options = {}) {
     proc.stderr.on("data", (chunk) => { stderr += chunk; });
 
     if (stdin) {
-      proc.stdin.write(stdin);
-      proc.stdin.end();
+      // Handle backpressure: if the OS pipe buffer is full, wait for drain
+      if (!proc.stdin.write(stdin)) {
+        proc.stdin.once("drain", () => proc.stdin.end());
+      } else {
+        proc.stdin.end();
+      }
     }
 
-    const timer = setTimeout(() => {
-      proc.kill("SIGTERM");
-      reject(new Error(`Gemini CLI timed out after ${timeout}ms`));
-    }, timeout);
-
     proc.on("close", (code) => {
-      clearTimeout(timer);
       resolve({ stdout, stderr, exitCode: code });
     });
 
     proc.on("error", (err) => {
-      clearTimeout(timer);
       reject(err);
     });
   });
@@ -162,10 +160,8 @@ function runGeminiRaw(args, options = {}) {
  * Load a prompt template from the prompts/ directory.
  */
 export async function loadPromptTemplate(name) {
-  const dir = path.resolve(
-    path.dirname(new URL(import.meta.url).pathname),
-    "../../prompts"
-  );
+  const currentPath = fileURLToPath(import.meta.url);
+  const dir = path.resolve(path.dirname(currentPath), "../../prompts");
   const filePath = path.join(dir, `${name}.md`);
   return readFile(filePath, "utf-8");
 }
