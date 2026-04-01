@@ -112,7 +112,11 @@ function launchBackgroundWorker(jobId, kind, prompt, options = {}) {
     model: options.model || null,
   });
 
-  writeJobFile(workspaceRoot, jobId, { ...jobRecord, prompt });
+  writeJobFile(workspaceRoot, jobId, {
+    ...jobRecord,
+    prompt,
+    stdinPayload: options.stdinPayload || null,
+  });
   upsertJob(workspaceRoot, jobRecord);
 
   // Spawn detached worker process
@@ -191,11 +195,11 @@ async function buildAskPrompt(flags, positional) {
   if (!question) throw new Error("No question provided.\nUsage: /gemini:ask <question>");
 
   const stdinContent = await readStdinIfPiped();
-  let prompt = question;
   if (stdinContent) {
-    prompt = `Context:\n\`\`\`\n${stdinContent}\n\`\`\`\n\nQuestion: ${question}`;
+    // Pipe large context via stdin, keep the question as the CLI arg
+    return { prompt: question, stdinPayload: stdinContent, title: question };
   }
-  return { prompt, title: question };
+  return { prompt: question, title: question };
 }
 
 async function buildReviewPrompt(flags, positional) {
@@ -209,11 +213,11 @@ async function buildReviewPrompt(flags, positional) {
   let prompt;
   try {
     const template = await loadPromptTemplate("code-review");
-    prompt = interpolateTemplate(template, { diff, focus });
+    prompt = interpolateTemplate(template, { focus });
   } catch {
-    prompt = `You are an expert code reviewer. Review the following git diff.\n\nFocus: ${focus}\n\nProvide:\n1. **Critical issues** — bugs, security problems, data loss risks\n2. **Important suggestions** — performance, maintainability, best practices\n3. **Minor notes** — style, naming, documentation\n\nBe specific: reference file names and line numbers from the diff.\n\n\`\`\`diff\n${diff}\n\`\`\``;
+    prompt = `You are an expert code reviewer. Review the git diff provided via stdin.\n\nFocus: ${focus}\n\nProvide:\n1. **Critical issues** — bugs, security problems, data loss risks\n2. **Important suggestions** — performance, maintainability, best practices\n3. **Minor notes** — style, naming, documentation\n\nBe specific: reference file names and line numbers from the diff.`;
   }
-  return { prompt, title: `review: ${focus}` };
+  return { prompt, stdinPayload: diff, title: `review: ${focus}` };
 }
 
 async function buildAdversarialReviewPrompt(flags, positional) {
@@ -227,11 +231,11 @@ async function buildAdversarialReviewPrompt(flags, positional) {
   let prompt;
   try {
     const template = await loadPromptTemplate("adversarial-review");
-    prompt = interpolateTemplate(template, { diff, focus });
+    prompt = interpolateTemplate(template, { focus });
   } catch {
-    prompt = `You are a hostile, adversarial code reviewer. Assume bugs exist. Review this diff for security holes, race conditions, edge cases, data integrity issues, and failure modes. Be specific — file:line references, exploit scenarios, concrete fixes. Do NOT pad with praise.\n\nFocus: ${focus}\n\n\`\`\`diff\n${diff}\n\`\`\``;
+    prompt = `You are a hostile, adversarial code reviewer. Assume bugs exist. Review the git diff provided via stdin for security holes, race conditions, edge cases, data integrity issues, and failure modes. Be specific — file:line references, exploit scenarios, concrete fixes. Do NOT pad with praise.\n\nFocus: ${focus}`;
   }
-  return { prompt, title: `adversarial-review: ${focus}` };
+  return { prompt, stdinPayload: diff, title: `adversarial-review: ${focus}` };
 }
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"]);
@@ -244,39 +248,43 @@ function isImageFile(filePath) {
 
 async function buildUiReviewPrompt(flags, positional) {
   const focus = positional.join(" ") || "general UI/UX review";
-  let context = "";
+  let stdinPayload = "";
   const mediaFiles = [];
 
   if (flags.file) {
     if (isImageFile(flags.file)) {
-      // Pass image directly to Gemini CLI as a media file (vision)
       mediaFiles.push(flags.file);
     } else {
       const content = await readFileContext(flags.file);
       if (content) {
-        context = `\nFile: ${flags.file}\n\`\`\`\n${content}\n\`\`\`\n`;
+        stdinPayload = `File: ${flags.file}\n${content}`;
       }
     }
   }
 
   const stdinContent = await readStdinIfPiped();
   if (stdinContent) {
-    context += `\nProvided content:\n\`\`\`\n${stdinContent}\n\`\`\`\n`;
+    stdinPayload += (stdinPayload ? "\n\n" : "") + stdinContent;
   }
 
-  if (!context && !mediaFiles.length) {
+  if (!stdinPayload && !mediaFiles.length) {
     const diff = await getGitDiff();
-    if (diff) context = `\nGit diff:\n\`\`\`diff\n${diff}\n\`\`\`\n`;
+    if (diff) stdinPayload = diff;
   }
 
   let prompt;
   try {
     const template = await loadPromptTemplate("ui-review");
-    prompt = interpolateTemplate(template, { context, focus });
+    prompt = interpolateTemplate(template, { focus });
   } catch {
-    prompt = `You are an expert UI/UX reviewer. Review the following for usability, accessibility, clarity, and user experience.\n\nFocus: ${focus}\n${context}\n\nProvide feedback on:\n1. **UX flow** — Is the user journey clear and intuitive?\n2. **Accessibility** — WCAG compliance, screen readers, keyboard nav\n3. **Copy & messaging** — Error messages, labels, help text clarity\n4. **Visual hierarchy** — Layout, spacing, affordances\n5. **Edge cases** — Empty states, loading states, error states\n\nBe specific and actionable.`;
+    prompt = `You are an expert UI/UX reviewer. Review the content provided via stdin for usability, accessibility, clarity, and user experience.\n\nFocus: ${focus}\n\nProvide feedback on:\n1. **UX flow** — Is the user journey clear and intuitive?\n2. **Accessibility** — WCAG compliance, screen readers, keyboard nav\n3. **Copy & messaging** — Error messages, labels, help text clarity\n4. **Visual hierarchy** — Layout, spacing, affordances\n5. **Edge cases** — Empty states, loading states, error states\n\nBe specific and actionable.`;
   }
-  return { prompt, title: `ui-review: ${focus}`, mediaFiles: mediaFiles.length ? mediaFiles : undefined };
+  return {
+    prompt,
+    stdinPayload: stdinPayload || undefined,
+    title: `ui-review: ${focus}`,
+    mediaFiles: mediaFiles.length ? mediaFiles : undefined,
+  };
 }
 
 async function buildTaskPrompt(flags, positional) {
@@ -284,17 +292,16 @@ async function buildTaskPrompt(flags, positional) {
   if (!taskPrompt) throw new Error("No task prompt provided.\nUsage: /gemini:task <prompt>");
 
   const stdinContent = await readStdinIfPiped();
-  let prompt = taskPrompt;
   if (stdinContent) {
-    prompt = `Context:\n\`\`\`\n${stdinContent}\n\`\`\`\n\nTask: ${taskPrompt}`;
+    return { prompt: taskPrompt, stdinPayload: stdinContent, title: taskPrompt };
   }
-  return { prompt, title: taskPrompt };
+  return { prompt: taskPrompt, title: taskPrompt };
 }
 
 // ─── Generic run-or-background handler ──────────────────────────────
 
 async function runCommand(kind, flags, positional, promptBuilder) {
-  const { prompt, title, empty, mediaFiles } = await promptBuilder(flags, positional);
+  const { prompt, stdinPayload, title, empty, mediaFiles } = await promptBuilder(flags, positional);
 
   if (empty) {
     console.log("No changes found to review.");
@@ -309,6 +316,7 @@ async function runCommand(kind, flags, positional, promptBuilder) {
       model: flags.model,
       yolo: flags.yolo,
       title,
+      stdinPayload,
     });
 
     const lines = [
@@ -332,6 +340,7 @@ async function runCommand(kind, flags, positional, promptBuilder) {
     yolo: flags.yolo || false,
     resume: flags.resume || undefined,
     mediaFiles,
+    stdin: stdinPayload,
   });
 
   if (result.exitCode !== 0) {
@@ -436,6 +445,7 @@ async function cmdTaskWorker(flags, positional) {
   const jobData = readJobFile(jobFile);
   const logFile = jobData.logFile || resolveJobLogFile(workspaceRoot, jobId);
   const prompt = jobData.prompt;
+  const stdinPayload = jobData.stdinPayload || null;
 
   if (!prompt) {
     appendLogLine(logFile, "No prompt found in job file.");
@@ -454,6 +464,7 @@ async function cmdTaskWorker(flags, positional) {
       model: flags.model,
       yolo: flags.yolo || false,
       timeout: 600_000, // 10 min for background jobs
+      stdin: stdinPayload,
     });
 
     const completionStatus = result.exitCode === 0 ? "completed" : "failed";

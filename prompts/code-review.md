@@ -15,6 +15,4 @@ Style, naming, documentation, minor improvements.
 
 Be specific: reference file names and line numbers from the diff. For each issue, explain WHY it's a problem and suggest a fix.
 
-```diff
-{{diff}}
-```
+The git diff is provided via stdin.

@@ -49,6 +49,4 @@ For each finding:
 
 Do NOT pad with praise. Do NOT say "overall looks good." Find the problems.
 
-```diff
-{{diff}}
-```
+The git diff is provided via stdin.

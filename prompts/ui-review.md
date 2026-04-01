@@ -2,7 +2,7 @@ You are an expert UI/UX reviewer. Review the following for usability, accessibil
 
 Focus: {{focus}}
 
-{{context}}
+The content to review is provided via stdin.
 
 Provide feedback on:
 
