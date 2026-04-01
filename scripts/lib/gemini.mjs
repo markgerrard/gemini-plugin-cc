@@ -81,6 +81,13 @@ export async function runGeminiPrompt(prompt, options = {}) {
 
   const result = await runGeminiRaw(args, { stdin, timeout });
 
+  if (result.exitCode !== 0 && !result.stdout.trim()) {
+    return {
+      text: `Gemini CLI Error (exit ${result.exitCode}): ${result.stderr.trim() || "unknown error"}`,
+      exitCode: result.exitCode,
+    };
+  }
+
   return {
     text: result.stdout,
     exitCode: result.exitCode,
@@ -103,13 +110,20 @@ export async function runGeminiJSON(prompt, options = {}) {
 
   const result = await runGeminiRaw(args, { stdin, timeout });
 
+  if (result.exitCode !== 0 && !result.stdout.trim()) {
+    return {
+      data: null,
+      text: `Gemini CLI Error (exit ${result.exitCode}): ${result.stderr.trim() || "unknown error"}`,
+      exitCode: result.exitCode,
+    };
+  }
+
   try {
     return {
       data: JSON.parse(result.stdout),
       exitCode: result.exitCode,
     };
   } catch {
-    // Gemini sometimes outputs non-JSON even with -o json; return raw
     return {
       data: null,
       text: result.stdout,
