@@ -116,6 +116,7 @@ function launchBackgroundWorker(jobId, kind, prompt, options = {}) {
     ...jobRecord,
     prompt,
     stdinPayload: options.stdinPayload || null,
+    mediaFiles: options.mediaFiles || [],
   });
   upsertJob(workspaceRoot, jobRecord);
 
@@ -317,6 +318,7 @@ async function runCommand(kind, flags, positional, promptBuilder) {
       yolo: flags.yolo,
       title,
       stdinPayload,
+      mediaFiles,
     });
 
     const lines = [
@@ -446,6 +448,7 @@ async function cmdTaskWorker(flags, positional) {
   const logFile = jobData.logFile || resolveJobLogFile(workspaceRoot, jobId);
   const prompt = jobData.prompt;
   const stdinPayload = jobData.stdinPayload || null;
+  const mediaFiles = jobData.mediaFiles || [];
 
   if (!prompt) {
     appendLogLine(logFile, "No prompt found in job file.");
@@ -465,6 +468,7 @@ async function cmdTaskWorker(flags, positional) {
       yolo: flags.yolo || false,
       timeout: 600_000, // 10 min for background jobs
       stdin: stdinPayload,
+      mediaFiles: mediaFiles.length ? mediaFiles : undefined,
     });
 
     const completionStatus = result.exitCode === 0 ? "completed" : "failed";
