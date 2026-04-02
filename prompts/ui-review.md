@@ -21,4 +21,8 @@ Layout, spacing, affordances — does the interface guide the user's eye correct
 ## Edge Cases
 Empty states, loading states, error states, long content, mobile responsiveness.
 
-Be specific and actionable. Reference specific elements, classes, or components.
+**Strict Output Rules:**
+* **Be specific and actionable:** Reference specific elements, classes, or components.
+* **Format for terminal:** Use concise bullet points under each heading. Avoid nested bullets.
+* **No fluff:** Do not include introductory or concluding remarks. Start immediately with the first heading.
+* **Skip empty sections:** If there are no issues in a specific category, omit that heading entirely rather than writing "Looks good".

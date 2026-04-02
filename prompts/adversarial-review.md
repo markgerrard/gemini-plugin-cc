@@ -47,6 +47,11 @@ For each finding:
 4. **Exploit scenario or failure case** — show how it breaks
 5. **Fix** — concrete code change, not "consider improving"
 
-Do NOT pad with praise. Do NOT say "overall looks good." Find the problems.
-
 The git diff is provided via stdin.
+
+**Strict Output Rules:**
+* **Do NOT pad with praise.** Do NOT say "overall looks good." Find the problems.
+* **Be specific and actionable:** File:line references, exploit scenarios, concrete fixes — not vague suggestions.
+* **Format for terminal:** Use concise bullet points under each heading. Avoid nested bullets.
+* **No fluff:** Do not include introductory or concluding remarks. Start immediately with the first finding.
+* **Skip empty sections:** If there are no issues in a category, omit it entirely.
