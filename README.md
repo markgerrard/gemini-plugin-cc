@@ -108,10 +108,10 @@ Two distinct modes — don't mix them up:
 
 ```
 /gemini:task --model pro "
-Goal: Generate test cases for the payment callback flow
-Context: Laravel app with CardEasy callback handling
-Constraints: Cover idempotency, signature validation, retries, and failed payments
-Done when: I have a concise set of high-value test cases grouped by scenario
+Goal: Generate test cases for the webhook handler
+Context: Node.js/Express app receiving Stripe webhooks
+Constraints: Cover signature validation, idempotency, retries, and partial failures
+Done when: Concise set of high-value test cases grouped by scenario
 "
 ```
 
@@ -144,7 +144,7 @@ Done when: I have a concise set of high-value test cases grouped by scenario
 /gemini:ui-design --model pro "Design a settings page with profile, notifications, and billing tabs"
 
 # Structured tasks
-/gemini:task "Goal: Write migration plan for users table. Context: Laravel 11, PostgreSQL. Constraints: zero downtime. Done when: step-by-step SQL + rollback plan."
+/gemini:task "Goal: Write migration plan for users table. Context: PostgreSQL, production. Constraints: zero downtime. Done when: step-by-step SQL + rollback plan."
 /gemini:task --model pro "Goal: Design caching strategy. Context: Redis available, 10k RPM. Done when: cache keys, TTLs, invalidation rules defined."
 
 # Background job management
