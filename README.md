@@ -1,6 +1,8 @@
 # Gemini Plugin for Claude Code
 
-A Claude Code plugin that brings Gemini in as a second LLM for adversarial review, UI design, and second-opinion reasoning — directly inside your workflow.
+A Claude Code plugin that brings Gemini into your workflow as a second model for adversarial review, UI/UX critique, design direction, and second-opinion reasoning — without leaving Claude Code.
+
+**Operating model:** Gemini advises, Claude interprets, user decides.
 
 ## Prerequisites
 
@@ -91,20 +93,28 @@ Two distinct modes — don't mix them up:
 - **`/gemini:ui-review`** → **Critic mode.** Finds defects. No praise, no suggestions. Severity-tagged findings only.
 - **`/gemini:ui-design`** → **Architect mode.** Generates improvements or new designs. Concrete values (hex, px, rem, Tailwind classes). Opinionated, not exploratory.
 
-## Using `/gemini:task` effectively
+## When to use which command
 
-`/gemini:task` is the most powerful command but also the most open-ended. Structure your prompts for best results:
+- `/gemini:ask` — second opinion, copy, wording, architecture questions
+- `/gemini:review` — normal code review from git diff
+- `/gemini:adversarial-review` — hostile review assuming bugs or weaknesses exist
+- `/gemini:ui-review` — find UI/UX, accessibility, and interaction defects
+- `/gemini:ui-design` — generate design improvements or new UI directions
+- `/gemini:task` — delegate a broader structured task to Gemini
+
+## Task prompt best practice
+
+`/gemini:task` is the most powerful command but also the most open-ended. For best results, structure prompts with Goal, Context, Constraints, and Done condition:
 
 ```
-/gemini:task "
-Goal: Generate API error response standards for our Laravel app
-Context: We use JSON:API format, Laravel 11, return codes 400/401/403/404/422/500
-Constraints: Must be consistent with existing ErrorResponse class
-Done when: Complete list of error shapes with example JSON for each code
+/gemini:task --model pro "
+Goal: Generate test cases for the payment callback flow
+Context: Laravel app with CardEasy callback handling
+Constraints: Cover idempotency, signature validation, retries, and failed payments
+Done when: I have a concise set of high-value test cases grouped by scenario
 "
 ```
 
-**Best practices:**
 - State the goal, not just the topic
 - Include constraints (stack, conventions, existing code)
 - Define what "done" looks like
