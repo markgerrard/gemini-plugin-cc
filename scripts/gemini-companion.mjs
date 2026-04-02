@@ -76,6 +76,7 @@ function printUsage() {
       "  node scripts/gemini-companion.mjs review [--background|--wait] [--base <ref>] [--scope <auto|working-tree|branch>] [focus]",
       "  node scripts/gemini-companion.mjs ui-review [--background|--wait] [--file <path>] [focus]",
       "  node scripts/gemini-companion.mjs task [--background|--wait] [--model <model>] [--yolo] <prompt>",
+      "  node scripts/gemini-companion.mjs ui-design [--background|--wait] [--file <path>] [--model <model>] [design brief]",
       "  node scripts/gemini-companion.mjs adversarial-review [--background|--wait] [--base <ref>] [--scope <auto|working-tree|branch>] [focus]",
       "  node scripts/gemini-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/gemini-companion.mjs result [job-id] [--json]",
@@ -172,6 +173,7 @@ async function cmdSetup(flags) {
       lines.push("  /gemini:review [focus]               — Code review (uses git diff)");
       lines.push("  /gemini:ui-review [focus]            — UI/UX review");
       lines.push("  /gemini:task <prompt>                — Delegate a task to Gemini");
+      lines.push("  /gemini:ui-design [brief]              — Creative UI design suggestions");
       lines.push("  /gemini:adversarial-review [focus]    — Hostile code review");
       lines.push("  /gemini:status [job-id]              — Show job status");
       lines.push("  /gemini:result [job-id]              — Show finished job result");
@@ -284,6 +286,43 @@ async function buildUiReviewPrompt(flags, positional) {
     prompt,
     stdinPayload: stdinPayload || undefined,
     title: `ui-review: ${focus}`,
+    mediaFiles: mediaFiles.length ? mediaFiles : undefined,
+  };
+}
+
+async function buildUiDesignPrompt(flags, positional) {
+  const focus = positional.join(" ") || "";
+  let stdinPayload = "";
+  const mediaFiles = [];
+
+  if (flags.file) {
+    if (isImageFile(flags.file)) {
+      mediaFiles.push(flags.file);
+    } else {
+      const content = await readFileContext(flags.file);
+      if (content) {
+        stdinPayload = `File: ${flags.file}\n${content}`;
+      }
+    }
+  }
+
+  const stdinContent = await readStdinIfPiped();
+  if (stdinContent) {
+    stdinPayload += (stdinPayload ? "\n\n" : "") + stdinContent;
+  }
+
+  let prompt;
+  try {
+    const template = await loadPromptTemplate("ui-design");
+    prompt = interpolateTemplate(template, { focus: focus || "redesign the entire interface" });
+  } catch {
+    prompt = `You are a creative UI/UX designer. Provide opinionated, specific design suggestions.\n\nFocus: ${focus || "redesign the entire interface"}\n\nBe specific — name exact colors (hex), spacing, fonts, layouts. Every suggestion must be implementable in CSS/HTML.`;
+  }
+
+  return {
+    prompt,
+    stdinPayload: stdinPayload || undefined,
+    title: `ui-design: ${focus || "full design"}`,
     mediaFiles: mediaFiles.length ? mediaFiles : undefined,
   };
 }
@@ -552,6 +591,9 @@ async function main() {
       break;
     case "ui-review":
       await runCommand("ui-review", flags, positional, buildUiReviewPrompt);
+      break;
+    case "ui-design":
+      await runCommand("ui-design", flags, positional, buildUiDesignPrompt);
       break;
     case "task":
       await runCommand("task", flags, positional, buildTaskPrompt);
