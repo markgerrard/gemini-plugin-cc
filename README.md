@@ -137,14 +137,14 @@ This plugin is designed to complement [Codex](https://github.com/openai/codex) i
 
 | Task | Best tool |
 |------|-----------|
-| UI/UX defect review | `/gemini:ui-review` |
-| UI design suggestions | `/gemini:ui-design` |
-| Copy, error messages, wording | `/gemini:ask` |
-| Accessibility audit | `/gemini:ui-review` |
-| Code review | `/gemini:review` or `/codex:review` |
-| Security/adversarial review | `/gemini:adversarial-review` or `/codex:adversarial-review` |
-| Backend logic, performance | `/codex:task` |
-| Schema design, concurrency | `/codex:task` |
+| UI/UX defect review | **Gemini** — `/gemini:ui-review` |
+| UI design suggestions | **Gemini** — `/gemini:ui-design` |
+| Copy, error messages, wording | **Gemini** — `/gemini:ask` |
+| Accessibility audit | **Gemini** — `/gemini:ui-review` |
+| Code review | Either — `/gemini:review` or `/codex:review` |
+| Security/adversarial review | Either — `/gemini:adversarial-review` or `/codex:adversarial-review` |
+| Backend logic, performance | **Codex** |
+| Schema design, concurrency | **Codex** |
 
 **Key rule:** Gemini advises, Claude interprets, user decides.
 
