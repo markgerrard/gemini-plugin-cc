@@ -69,17 +69,22 @@ export async function runGeminiPrompt(prompt, options = {}) {
   if (resume) args.push("--resume", resume);
   args.push("-o", "text");
   if (mediaFiles?.length) {
-    // Media files: gemini "prompt" image.png (positional args, no -p flag)
-    args.push(prompt);
+    // Gemini CLI cannot combine -p with positional args.
+    // Media files must be positional, so the prompt goes positional too.
+    // If there's also stdin content, merge it into the prompt string
+    // (it's the instruction text, not a large payload — those go via stdin).
+    const fullPrompt = stdin ? `${prompt}\n\nAdditional context:\n${stdin}` : prompt;
+    args.push(fullPrompt);
     args.push(...mediaFiles);
   } else if (stdin) {
-    // When piping stdin, use -p so Gemini reads stdin as context
+    // No media files: use -p so Gemini reads stdin as context
     args.push("-p", prompt);
   } else {
     args.push(prompt);
   }
 
-  const result = await runGeminiRaw(args, { stdin, timeout });
+  // Don't pipe stdin when media files are present (merged into prompt above)
+  const result = await runGeminiRaw(args, { stdin: mediaFiles?.length ? null : stdin, timeout });
 
   if (result.exitCode !== 0 && !result.stdout.trim()) {
     return {
