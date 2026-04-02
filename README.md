@@ -64,16 +64,34 @@ Restart Claude Code to load the plugin.
 ### Examples
 
 ```
+# Ask anything
 /gemini:ask "What's the best caching strategy for this API?"
+
+# Code review
 /gemini:review security
 /gemini:review --background --base main --scope branch
 /gemini:adversarial-review "authentication flow"
-/gemini:ui-review --file login.blade.php "form usability"
-/gemini:ui-design "Design a modern payment confirmation page"
-/gemini:ui-design --file screenshot.png "Keep layout but make it premium"
+
+# UI/UX defect review — finds problems
+/gemini:ui-review "form usability"
+/gemini:ui-review --file login.blade.php "accessibility"
+/gemini:ui-review --file screenshot.png "mobile layout"
+/gemini:ui-review --background "full audit"
+
+# UI design — generates improvements and new designs
+/gemini:ui-design "Design a modern payment confirmation page with order summary"
+/gemini:ui-design --file screenshot.png "Keep the layout but make it feel premium"
+/gemini:ui-design --file dashboard.blade.php "Modernise the sidebar navigation"
+/gemini:ui-design --file mockup.png "Take the color palette and typography but redesign the card layout"
+/gemini:ui-design --model pro "Design a settings page with profile, notifications, and billing tabs"
+
+# General tasks
 /gemini:task --model pro "Generate test cases for the payment callback flow"
+
+# Background job management
 /gemini:status
 /gemini:result
+/gemini:cancel
 ```
 
 ## Options
