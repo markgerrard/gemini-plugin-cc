@@ -63,5 +63,6 @@ Rules:
 - No restating the current UI
 - No theory explanations
 
-Limit output to 10–15 highest-impact changes.
-Ignore low-value cosmetic tweaks.
+Output limits:
+- If improving existing UI: limit to 10–15 highest-impact changes. Ignore low-value cosmetic tweaks.
+- If designing from scratch: cover all sections thoroughly — no limit, but no filler. Every bullet must earn its place.
