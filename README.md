@@ -1,6 +1,6 @@
 # Gemini Plugin for Claude Code
 
-A Claude Code plugin that wraps Google's [Gemini CLI](https://github.com/google-gemini/gemini-cli) as native slash commands, giving you access to Gemini as a second opinion, UI/UX advisor, design architect, and code reviewer — all without leaving Claude Code.
+A Claude Code plugin that brings Gemini in as a second LLM for adversarial review, UI design, and second-opinion reasoning — directly inside your workflow.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ gemini  # triggers browser OAuth on first run
 
 ## Installation
 
-**Recommended:** Use the [claude-code-llm-plugins](https://github.com/markgerrard/claude-code-llm-plugins) monorepo which bundles this plugin alongside Codex:
+**Recommended:** Use the [claude-code-llm-plugins](https://github.com/markgerrard/claude-code-llm-plugins) monorepo:
 
 ```bash
 git clone https://github.com/markgerrard/claude-code-llm-plugins.git
@@ -46,20 +46,69 @@ Then add the following entry to `~/.claude/plugins/installed_plugins.json` under
 
 Restart Claude Code to load the plugin.
 
+## When to use Gemini vs Claude
+
+| Use Gemini when | Use Claude when |
+|-----------------|-----------------|
+| You want a second opinion or adversarial review | You are implementing changes |
+| You're designing UI/UX or reviewing copy | You need structured code edits |
+| You need alternative reasoning or critique | You are orchestrating workflows |
+| You want visual/screenshot analysis | You need to read/write project files |
+
+**Best workflow:** Gemini critiques → Claude executes → repeat.
+
 ## Commands
+
+### Analysis commands (Gemini observes and reports)
 
 | Command | Description |
 |---------|-------------|
-| `/gemini:setup` | Check Gemini CLI availability and auth status |
 | `/gemini:ask <question>` | Ask Gemini a question or get a second opinion |
 | `/gemini:review [focus]` | Code review using git diff |
 | `/gemini:adversarial-review [focus]` | Hostile code review — assumes bugs exist |
 | `/gemini:ui-review [focus]` | UI/UX defect review (ruthless critic) |
-| `/gemini:ui-design [brief]` | Creative UI design suggestions (opinionated architect) |
-| `/gemini:task <prompt>` | Delegate a general task to Gemini |
+
+### Creative commands (Gemini proposes solutions)
+
+| Command | Description |
+|---------|-------------|
+| `/gemini:ui-design [brief]` | Opinionated UI design suggestions with concrete values |
+| `/gemini:task <prompt>` | Structured solution output for a specific goal |
+
+### Job management
+
+| Command | Description |
+|---------|-------------|
+| `/gemini:setup` | Check Gemini CLI availability and auth status |
 | `/gemini:status [job-id]` | Show active and recent background jobs |
 | `/gemini:result [job-id]` | Show finished job output |
 | `/gemini:cancel [job-id]` | Cancel an active background job |
+
+## UI commands
+
+Two distinct modes — don't mix them up:
+
+- **`/gemini:ui-review`** → **Critic mode.** Finds defects. No praise, no suggestions. Severity-tagged findings only.
+- **`/gemini:ui-design`** → **Architect mode.** Generates improvements or new designs. Concrete values (hex, px, rem, Tailwind classes). Opinionated, not exploratory.
+
+## Using `/gemini:task` effectively
+
+`/gemini:task` is the most powerful command but also the most open-ended. Structure your prompts for best results:
+
+```
+/gemini:task "
+Goal: Generate API error response standards for our Laravel app
+Context: We use JSON:API format, Laravel 11, return codes 400/401/403/404/422/500
+Constraints: Must be consistent with existing ErrorResponse class
+Done when: Complete list of error shapes with example JSON for each code
+"
+```
+
+**Best practices:**
+- State the goal, not just the topic
+- Include constraints (stack, conventions, existing code)
+- Define what "done" looks like
+- Use `--model pro` for complex reasoning tasks
 
 ### Examples
 
@@ -82,11 +131,11 @@ Restart Claude Code to load the plugin.
 /gemini:ui-design "Design a modern payment confirmation page with order summary"
 /gemini:ui-design --file screenshot.png "Keep the layout but make it feel premium"
 /gemini:ui-design --file dashboard.blade.php "Modernise the sidebar navigation"
-/gemini:ui-design --file mockup.png "Take the color palette and typography but redesign the card layout"
 /gemini:ui-design --model pro "Design a settings page with profile, notifications, and billing tabs"
 
-# General tasks
-/gemini:task --model pro "Generate test cases for the payment callback flow"
+# Structured tasks
+/gemini:task "Goal: Write migration plan for users table. Context: Laravel 11, PostgreSQL. Constraints: zero downtime. Done when: step-by-step SQL + rollback plan."
+/gemini:task --model pro "Goal: Design caching strategy. Context: Redis available, 10k RPM. Done when: cache keys, TTLs, invalidation rules defined."
 
 # Background job management
 /gemini:status
@@ -105,9 +154,16 @@ Restart Claude Code to load the plugin.
 | `--scope <auto\|working-tree\|branch>` | review, adversarial-review | What to diff |
 | `--file <path>` | ui-review, ui-design | File to review/analyse (supports images) |
 | `--resume <id\|latest>` | ask, task | Resume a previous Gemini CLI session |
-| `--yolo` | task | Auto-approve Gemini tool use |
+| `--yolo` | task | Auto-approve Gemini tool use (see warning below) |
 | `--json` | setup, status, result | JSON output |
 | `--all` | status | Show full job history |
+
+### `--yolo` warning
+
+Auto-approves all tool execution inside Gemini (file edits, shell commands, etc.) without confirmation. Only use when:
+- You trust the prompt and context completely
+- You're in a disposable environment or have uncommitted work saved
+- The task is well-scoped (not open-ended)
 
 ### Model Aliases
 
@@ -119,48 +175,12 @@ Restart Claude Code to load the plugin.
 | `25flash` | gemini-2.5-flash |
 | `lite` | gemini-2.5-flash-lite |
 
-## Architecture
+## Context guidelines
 
-```
-.claude-plugin/plugin.json          # Plugin manifest
-commands/*.md                       # Slash command definitions (YAML frontmatter)
-scripts/gemini-companion.mjs        # Main entry point — routes subcommands
-scripts/lib/
-  gemini.mjs                        # Spawns Gemini CLI, captures output, model aliases
-  context.mjs                       # Git diff and file context gathering
-  args.mjs                          # Argument parsing
-  state.mjs                         # File-based job persistence per workspace
-  tracked-jobs.mjs                  # Job lifecycle tracking
-  job-control.mjs                   # Job querying, filtering, resolution
-  render.mjs                        # Output formatting for status/result/cancel
-  process.mjs                       # Process tree termination
-  workspace.mjs                     # Git workspace root detection
-scripts/session-lifecycle-hook.mjs  # Session start/end cleanup
-hooks/hooks.json                    # Session lifecycle hook config
-prompts/*.md                        # Prompt templates with {{variable}} interpolation
-skills/                             # Skill definitions for Claude Code
-agents/                             # Agent definitions for Claude Code
-```
-
-### How it works
-
-- **Foreground commands** spawn `gemini` as a child process in non-interactive mode, pipe large payloads (git diffs, file contents) via stdin to avoid OS argument limits, and return the response to Claude Code.
-- **Background commands** (`--background`) spawn a detached worker process that writes results to disk. Use `/gemini:status`, `/gemini:result`, and `/gemini:cancel` to manage them.
-- **Session hooks** set a session ID on start and clean up stale jobs on end.
-- **Prompt templates** are tuned for terminal output — structured bullets, no fluff, severity-tagged findings.
-
-## Gemini strengths
-
-| Task | Command |
-|------|---------|
-| UI/UX defect review | `/gemini:ui-review` |
-| UI design suggestions | `/gemini:ui-design` |
-| Copy, error messages, wording | `/gemini:ask` |
-| Accessibility audit | `/gemini:ui-review` |
-| Code review | `/gemini:review` |
-| Security/adversarial review | `/gemini:adversarial-review` |
-
-**Key rule:** Gemini advises, Claude interprets, user decides.
+- **Prefer focused inputs over dumping entire repos.** A 500-line diff gets better analysis than a 10,000-line one.
+- **Large diffs may degrade response quality.** Gemini prioritises recent tokens — older parts of long stdin payloads may get less attention.
+- **Use `--file` + focused prompts for best results.** One component file beats a full git diff.
+- **Screenshots work best for UI commands.** Gemini's vision is strong — use Playwright to capture specific elements rather than full pages.
 
 ## Playwright integration
 
@@ -191,6 +211,36 @@ Playwright saves the screenshot (e.g. `/tmp/screenshot.png`).
 - Playwright can screenshot specific elements: ask it to capture just the navbar, a form, or a modal for focused review.
 - Use `--background` for large pages so Gemini can analyse without blocking your session.
 - Combine with code: ask Claude to read the component file, then pass both the screenshot and code context to Gemini for a complete picture.
+
+## Architecture
+
+```
+.claude-plugin/plugin.json          # Plugin manifest
+commands/*.md                       # Slash command definitions (YAML frontmatter)
+scripts/gemini-companion.mjs        # Main entry point — routes subcommands
+scripts/lib/
+  gemini.mjs                        # Spawns Gemini CLI, captures output, model aliases
+  context.mjs                       # Git diff and file context gathering
+  args.mjs                          # Argument parsing
+  state.mjs                         # File-based job persistence per workspace
+  tracked-jobs.mjs                  # Job lifecycle tracking
+  job-control.mjs                   # Job querying, filtering, resolution
+  render.mjs                        # Output formatting for status/result/cancel
+  process.mjs                       # Process tree termination
+  workspace.mjs                     # Git workspace root detection
+scripts/session-lifecycle-hook.mjs  # Session start/end cleanup
+hooks/hooks.json                    # Session lifecycle hook config
+prompts/*.md                        # Prompt templates with {{variable}} interpolation
+skills/                             # Skill definitions for Claude Code
+agents/                             # Agent definitions for Claude Code
+```
+
+### How it works
+
+- **Foreground commands** spawn `gemini` as a child process in non-interactive mode, pipe large payloads (git diffs, file contents) via stdin to avoid OS argument limits, and return the response to Claude Code.
+- **Background commands** (`--background`) spawn a detached worker process that writes results to disk. Use `/gemini:status`, `/gemini:result`, and `/gemini:cancel` to manage them.
+- **Session hooks** set a session ID on start and clean up stale jobs on end.
+- **Prompt templates** are tuned for terminal output — structured bullets, no fluff, severity-tagged findings.
 
 ## License
 
