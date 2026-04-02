@@ -162,6 +162,36 @@ agents/                             # Agent definitions for Claude Code
 
 **Key rule:** Gemini advises, Claude interprets, user decides.
 
+## Playwright integration
+
+Use Claude Code's [Playwright plugin](https://github.com/anthropics/claude-plugins-official) to capture screenshots of your running app, then feed them to Gemini for visual review or design suggestions.
+
+### Workflow
+
+1. **Take a screenshot** with Playwright:
+```
+Use Playwright to navigate to http://localhost:8000/login and take a screenshot
+```
+Playwright saves the screenshot (e.g. `/tmp/screenshot.png`).
+
+2. **Review it** — find UI/UX defects:
+```
+/gemini:ui-review --file /tmp/screenshot.png "login page accessibility and mobile"
+```
+
+3. **Or redesign it** — get design improvements:
+```
+/gemini:ui-design --file /tmp/screenshot.png "Modernise this login page"
+```
+
+4. **Iterate** — implement the suggestions, take a new screenshot, review again.
+
+### Tips
+
+- Playwright can screenshot specific elements: ask it to capture just the navbar, a form, or a modal for focused review.
+- Use `--background` for large pages so Gemini can analyse without blocking your session.
+- Combine with code: ask Claude to read the component file, then pass both the screenshot and code context to Gemini for a complete picture.
+
 ## License
 
 MIT
