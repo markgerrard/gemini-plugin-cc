@@ -70,7 +70,7 @@ Restart Claude Code to load the plugin.
 | `/gemini:adversarial-review [focus]` | Hostile code review — assumes bugs exist |
 | `/gemini:ui-review [focus]` | UI/UX defect review (ruthless critic) |
 
-### Creative commands (Gemini proposes solutions)
+### Solution commands (Gemini proposes or structures outcomes)
 
 | Command | Description |
 |---------|-------------|
@@ -93,7 +93,7 @@ Two distinct modes — don't mix them up:
 - **`/gemini:ui-review`** → **Critic mode.** Finds defects. No praise, no suggestions. Severity-tagged findings only.
 - **`/gemini:ui-design`** → **Architect mode.** Generates improvements or new designs. Concrete values (hex, px, rem, Tailwind classes). Opinionated, not exploratory.
 
-## When to use which command
+## Command selection guide
 
 - `/gemini:ask` — second opinion, copy, wording, architecture questions
 - `/gemini:review` — normal code review from git diff
@@ -136,9 +136,11 @@ Done when: Concise set of high-value test cases grouped by scenario
 /gemini:ui-review --file login.blade.php "accessibility"
 /gemini:ui-review --file screenshot.png "mobile layout"
 /gemini:ui-review --background "full audit"
+/gemini:ui-review --file /tmp/dashboard.png --background "mobile hierarchy and CTA clarity"
 
 # UI design — generates improvements and new designs
 /gemini:ui-design "Design a modern payment confirmation page with order summary"
+/gemini:ui-design --file /tmp/dashboard.png --model pro "Keep the structure but redesign the cards for better scanability"
 /gemini:ui-design --file screenshot.png "Keep the layout but make it feel premium"
 /gemini:ui-design --file dashboard.blade.php "Modernise the sidebar navigation"
 /gemini:ui-design --model pro "Design a settings page with profile, notifications, and billing tabs"
@@ -170,10 +172,7 @@ Done when: Concise set of high-value test cases grouped by scenario
 
 ### `--yolo` warning
 
-Auto-approves all tool execution inside Gemini (file edits, shell commands, etc.) without confirmation. Only use when:
-- You trust the prompt and context completely
-- You're in a disposable environment or have uncommitted work saved
-- The task is well-scoped (not open-ended)
+Auto-approves Gemini tool execution with no confirmation, including file edits and shell commands. Use only in trusted, well-scoped tasks and only when your work is saved.
 
 ### Model Aliases
 
@@ -240,9 +239,9 @@ scripts/lib/
   workspace.mjs                     # Git workspace root detection
 scripts/session-lifecycle-hook.mjs  # Session start/end cleanup
 hooks/hooks.json                    # Session lifecycle hook config
-prompts/*.md                        # Prompt templates with {{variable}} interpolation
-skills/                             # Skill definitions for Claude Code
-agents/                             # Agent definitions for Claude Code
+prompts/*.md                        # Command-specific prompt templates with {{variable}} interpolation
+skills/                             # Reusable Claude Code skills used by commands
+agents/                             # Optional agent definitions for delegated workflows
 ```
 
 ### How it works
