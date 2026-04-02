@@ -65,4 +65,4 @@ Rules:
 
 Output limits:
 - If improving existing UI: limit to 10–15 highest-impact changes. Ignore low-value cosmetic tweaks.
-- If designing from scratch: cover all sections thoroughly — no limit, but no filler. Every bullet must earn its place.
+- If designing from scratch: cover all relevant sections with enough detail to make the design direction buildable. Do not pad. Every bullet must introduce a concrete design decision.
